@@ -1,0 +1,11 @@
+{
+  "user": "postgres",
+  "password": "postgres",
+  "host": "localhost",
+  "port": "5432",
+  "db": "db",
+
+  "crowdBaseUrl": "https://passi.fmi.fi/crowd/",
+  "crowdApplication_name": "metweb",
+  "crowdApplication_pwd": "salainensalasana"
+}

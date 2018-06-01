@@ -28,6 +28,9 @@ let crowdSettings = {
 
 let crowd = new crowdClient(crowdSettings);
 
+app.post('/requestuserinfo', requestUserInformation);
+app.post('/getuserconfig', requestUserConfiguration);
+
 app.get('/test', (req, res) => {
   const client = new pg.Client(dbConnectionSettings);
   client.connect((err) => {
@@ -51,11 +54,28 @@ app.post('/authorize', function(req, res){
   console.log(req.body)
 })
 
-app.post('/requestuserinfo', requestUserInformation);
-
 app.get('/session', (req, res) => res.send('foobar'))
 
 app.listen(3000, () => console.log('Example app listening on port 3000!'))
+
+
+function requestUserConfiguration(req, res, next) {
+  const client = new pg.Client(dbConnectionSettings);
+  client.connect((err) => {
+    if (err) {
+      console.error('connection error', err.stack)
+    } else {
+      console.log('connected')
+    }
+  })
+  client.query("SELECT * FROM webt.redux_json WHERE kayttaja_id = (" +
+    "SELECT id FROM webt.kayttaja WHERE crowd = $1)", [req.body.user.name])
+    .then(result => {
+      res.send(result.rows[0].data)
+    })
+    .catch(e => console.error(e.stack))
+    .then(() => client.end())
+}
 
 function requestUserInformation(req, res, next) {
     console.log(req.body)

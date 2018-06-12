@@ -1,20 +1,26 @@
 const express = require('express'),
       app = express(),
-      bodyparser = require('body-parser')
+      bodyParser = require('body-parser'),
+      cors = require('cors'),
+      methodOverride = require('method-override')
 const pg = require('pg');
 const crowdClient = require('atlassian-crowd-client');
-let CONFIG = require('./config');
 
-app.use(bodyparser.urlencoded());
-app.use(bodyparser.json());
+const CONFIG = require('./config');
 
-// settings
+/* Settings */
+
+app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.json());
+app.use(cors());
+app.options("*", cors())
+
 let dbConnectionSettings = {
-    user: CONFIG.user,
-    password: CONFIG.password,
-    host: CONFIG.host,
-    port: CONFIG.port,
-    database: CONFIG.db,
+    user: CONFIG.dbUser,
+    password: CONFIG.dbPassword,
+    host: CONFIG.dbHost,
+    port: CONFIG.dbPort,
+    database: CONFIG.dbName,
     _enableStats: true   // debugging
 };
 
@@ -28,36 +34,26 @@ let crowdSettings = {
 
 let crowd = new crowdClient(crowdSettings);
 
-app.post('/requestuserinfo', requestUserInformation);
-app.post('/getuserconfig', requestUserConfiguration);
-
-app.get('/test', (req, res) => {
-  const client = new pg.Client(dbConnectionSettings);
-  client.connect((err) => {
-    if (err) {
-      console.error('connection error', err.stack)
-    } else {
-      console.log('connected')
-    }
-  })
-  client.query('SELECT * FROM webt.redux_json')
-    .then(result => {
-      // DO STUFF
-      console.log('result:' + result)
-      res.send(result.rows)
-    })
-    .catch(e => console.error(e.stack))
-    .then(() => client.end())
-})
-
 app.post('/authorize', function(req, res){
-  console.log(req.body)
+  if(!req.body.user.crowdToken){
+    res.status(403).send("No token.")
+  }else{
+    requestUserInformation(req, res, next)
+  }
 })
 
-app.get('/session', (req, res) => res.send('foobar'))
+app.get('/session', (req, res) => {
+  requestUserConfiguration(req, res);
+})
 
-app.listen(3000, () => console.log('Example app listening on port 3000!'))
+app.post('/session', (req, res) => {
+  console.log(req.body);
+  res.send("Thanks! Come back later. We don't have a save-to-database method yet.")
+})
 
+app.listen(CONFIG.servicePort, () => console.log('Example app listening on port '+CONFIG.servicePort+'!'))
+
+/* Middleware */
 
 function requestUserConfiguration(req, res, next) {
   const client = new pg.Client(dbConnectionSettings);
@@ -81,8 +77,9 @@ function requestUserInformation(req, res, next) {
     console.log(req.body)
     var token = req.body.user.userToken;
     console.log(token)
-    crowd.session.getUser(token).then(function (user) {
-        res.send(user); // AJAX POST callback -response (must send or otherwise POST request will timeout).
+    crowd.session.getUser(token
+    ).then(function (user) {
+        res.status(200).send(user); // AJAX POST callback -response (must send or otherwise POST request will timeout).
     });
 }
 

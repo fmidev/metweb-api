@@ -35,7 +35,8 @@ let crowdSettings = {
 let crowd = new crowdClient(crowdSettings);
 
 app.post('/authorize', function(req, res){
-  if(!req.body.user.crowdToken){
+  console.log(req);
+  if(!req.body.params.user.crowdToken){
     res.status(403).send("No token.")
   }else{
     requestUserInformation(req, res, next)
@@ -47,11 +48,10 @@ app.get('/session', (req, res) => {
 })
 
 app.post('/session', (req, res) => {
-  console.log(req.body);
   res.send("Thanks! Come back later. We don't have a save-to-database method yet.")
 })
 
-app.listen(CONFIG.servicePort, () => console.log('Example app listening on port '+CONFIG.servicePort+'!'))
+app.listen(CONFIG.servicePort, () => console.log('Metweb API listening on port '+CONFIG.servicePort+'!'))
 
 /* Middleware */
 
@@ -65,7 +65,7 @@ function requestUserConfiguration(req, res, next) {
     }
   })
   client.query("SELECT * FROM webt.redux_json WHERE kayttaja_id = (" +
-    "SELECT id FROM webt.kayttaja WHERE crowd = $1)", [req.body.user.name])
+    "SELECT id FROM webt.kayttaja WHERE crowd = $1)", [req.body.params.user.name])
     .then(result => {
       res.send(result.rows[0].data)
     })
@@ -74,8 +74,8 @@ function requestUserConfiguration(req, res, next) {
 }
 
 function requestUserInformation(req, res, next) {
-    console.log(req.body)
-    var token = req.body.user.userToken;
+    console.log(req.body.params)
+    var token = req.body.params.user.userToken;
     console.log(token)
     crowd.session.getUser(token
     ).then(function (user) {
@@ -85,7 +85,7 @@ function requestUserInformation(req, res, next) {
 
 function requestIsAdminUser(req, res, next) {
     if (rw_allowed) {
-        var token = req.body.user.userToken;
+        var token = req.body.params.user.userToken;
         crowd.session.getUser(token).then(function (user) {
             crowd.group.users.get("ilmanlaatu_meta_admin", user.username).then(function () {
                 res.send(true); // AJAX POST callback -response (must send or otherwise POST request will timeout).
@@ -101,7 +101,7 @@ function requestIsAdminUser(req, res, next) {
 }
 
 function logOffUser(req, res, next) {
-    var token = req.body.TOKEN;
+    var token = req.body.params.user.crowdToken;
     crowd.session.getUser(token).then(function (user) {
         crowd.session.removeAll(user.username).then(function () {
             crowd.session.destroy();

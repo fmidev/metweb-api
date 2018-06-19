@@ -48,7 +48,7 @@ app.get('/session', (req, res) => {
 })
 
 app.post('/session', (req, res) => {
-  res.send("Thanks! Come back later. We don't have a save-to-database method yet.")
+  insertUserConfiguration(req, res)
 })
 
 app.listen(CONFIG.servicePort, () => console.log('Metweb API listening on port '+CONFIG.servicePort+'!'))
@@ -64,8 +64,25 @@ function requestUserConfiguration(req, res, next) {
       console.log('connected')
     }
   })
-  client.query("SELECT * FROM webt.redux_json WHERE kayttaja_id = (" +
-    "SELECT id FROM webt.kayttaja WHERE crowd = $1)", [req.body.params.user.name])
+  client.query("SELECT * FROM webt.redux_json WHERE kayttaja_id = " +
+    "(SELECT id FROM webt.kayttaja WHERE crowd = $1) LIMIT BY 1", [req.body.params.user.crowdToken])
+    .then(result => {
+      res.send(result.rows[0].data)
+    })
+    .catch(e => console.error(e.stack))
+    .then(() => client.end())
+}
+
+function insertUserConfiguration(req, res, next) {
+  const client = new pg.Client(dbConnectionSettings);
+  client.connect((err) => {
+    if (err) {
+      console.error('connection error', err.stack)
+    } else {
+      console.log('connected')
+    }
+  })
+  client.query("INSERT INTO webt.redux_json (id, data) VALUES ((SELECT kayttaja_id FROM webt.kayttaja WHERE crowd = $1), $2)", [req.body.params.user.crowdToken, req.body.params.sessions])
     .then(result => {
       res.send(result.rows[0].data)
     })

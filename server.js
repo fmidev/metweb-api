@@ -8,6 +8,7 @@ const crowdClient = require('atlassian-crowd-client');
 
 const CONFIG = require('./config');
 
+
 /* Settings */
 
 app.use(bodyParser.urlencoded({extended: true}));
@@ -34,28 +35,37 @@ let crowdSettings = {
 
 let crowd = new crowdClient(crowdSettings);
 
+
+/* Endpoints */
+
 app.post('/authorize', function(req, res){
-  console.log(req);
   if(!req.body.params.user.crowdToken){
     res.status(403).send("No token.")
   }else{
-    requestUserInformation(req, res, next)
+    fetchUserInformation(req, res, function(user){
+      res.status(200).send(user);
+    })
   }
 })
 
 app.get('/session', (req, res) => {
-  requestUserConfiguration(req, res);
+  fetchUserConfiguration(req, res, function(result){
+    res.send(result.rows[0].data)
+  });
 })
 
 app.post('/session', (req, res) => {
-  insertUserConfiguration(req, res)
+  insertUserConfiguration(req, res, function(result){
+    res.send(result.rows[0].data)
+  })
 })
 
 app.listen(CONFIG.servicePort, () => console.log('Metweb API listening on port '+CONFIG.servicePort+'!'))
 
+
 /* Middleware */
 
-function requestUserConfiguration(req, res, next) {
+function fetchUserConfiguration(req, res, next) {
   const client = new pg.Client(dbConnectionSettings);
   client.connect((err) => {
     if (err) {
@@ -66,13 +76,12 @@ function requestUserConfiguration(req, res, next) {
   })
   client.query("SELECT * FROM webt.redux_json WHERE kayttaja_id = " +
     "(SELECT id FROM webt.kayttaja WHERE crowd = $1) LIMIT BY 1", [req.body.params.user.crowdToken])
-    .then(result => {
-      res.send(result.rows[0].data)
-    })
+    .then(result => next)
     .catch(e => console.error(e.stack))
     .then(() => client.end())
 }
 
+// Insert a configuration row to DB
 function insertUserConfiguration(req, res, next) {
   const client = new pg.Client(dbConnectionSettings);
   client.connect((err) => {
@@ -83,50 +92,49 @@ function insertUserConfiguration(req, res, next) {
     }
   })
   client.query("INSERT INTO webt.redux_json (id, data) VALUES ((SELECT kayttaja_id FROM webt.kayttaja WHERE crowd = $1), $2)", [req.body.params.user.crowdToken, req.body.params.sessions])
-    .then(result => {
-      res.send(result.rows[0].data)
-    })
+    .then(result => next)
     .catch(e => console.error(e.stack))
     .then(() => client.end())
 }
 
-function requestUserInformation(req, res, next) {
-    console.log(req.body.params)
-    var token = req.body.params.user.userToken;
-    console.log(token)
+// Fetch user info from Crowd
+function fetchUserInformation(req, res, next) {
+    var token = req.body.params.user.crowdToken;
     crowd.session.getUser(token
-    ).then(function (user) {
-        res.status(200).send(user); // AJAX POST callback -response (must send or otherwise POST request will timeout).
-    });
+        .then(user => next)
+    );
 }
 
-function requestIsAdminUser(req, res, next) {
+// Fetch admin status from Crowd
+function fetchIsAdminUser(req, res, next) {
     if (rw_allowed) {
         var token = req.body.params.user.userToken;
         crowd.session.getUser(token).then(function (user) {
+            /* TODO: Metweb group here. What's the name? */
             crowd.group.users.get("ilmanlaatu_meta_admin", user.username).then(function () {
-                res.send(true); // AJAX POST callback -response (must send or otherwise POST request will timeout).
+                res.send(true);
             }).catch(function () {
-                res.send(false); // AJAX POST callback -response (must send or otherwise POST request will timeout).
+                res.send(false);
             });
         }).catch(function () {
-            res.send(false); // AJAX POST callback -response (must send or otherwise POST request will timeout).
+            res.send(false);
         });
     } else {
-        res.send(false); // AJAX POST callback -response (must send or otherwise POST request will timeout).
+        res.send(false);
     }
 }
 
+// Terminate crowd session
 function logOffUser(req, res, next) {
     var token = req.body.params.user.crowdToken;
     crowd.session.getUser(token).then(function (user) {
         crowd.session.removeAll(user.username).then(function () {
             crowd.session.destroy();
-            res.send(true);  // AJAX POST callback -response (must send or otherwise POST request will timeout).
+            res.send(true);
         }).catch(function () {
-            res.send(false); // AJAX POST callback -response (must send or otherwise POST request will timeout).
+            res.send(false);
         });
     }).catch(function () {
-        res.send(false); // AJAX POST callback -response (must send or otherwise POST request will timeout).
+        res.send(false);
     });
 }

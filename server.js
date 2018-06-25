@@ -100,9 +100,11 @@ function insertUserConfiguration(req, res, next) {
 // Fetch user info from Crowd
 function fetchUserInformation(req, res, next) {
     var token = req.body.params.user.crowdToken;
-    crowd.session.getUser(token
+    next({user:{name: "foo"}});
+    /*
+    crowd.session.getUser(token)
         .then(user => next)
-    );
+    */
 }
 
 // Fetch admin status from Crowd

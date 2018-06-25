@@ -75,8 +75,8 @@ function fetchUserConfiguration(req, res, next) {
     }
   })
   client.query("SELECT * FROM webt.redux_json WHERE kayttaja_id = " +
-    "(SELECT id FROM webt.kayttaja WHERE crowd = $1) LIMIT BY 1", [req.body.params.user.crowdToken])
-    .then(result => next)
+    "(SELECT id FROM webt.kayttaja WHERE crowd = $1) LIMIT 1", [JSON.parse(req.query[0]).user.crowdToken])
+    .then(result => { next(result) })
     .catch(e => console.error(e.stack))
     .then(() => client.end())
 }
@@ -91,8 +91,8 @@ function insertUserConfiguration(req, res, next) {
       console.log('connected')
     }
   })
-  client.query("INSERT INTO webt.redux_json (id, data) VALUES ((SELECT kayttaja_id FROM webt.kayttaja WHERE crowd = $1), $2)", [req.body.params.user.crowdToken, req.body.params.sessions])
-    .then(result => next)
+  client.query("INSERT INTO webt.redux_json (kayttaja_id, data) VALUES ((SELECT id FROM webt.kayttaja WHERE crowd = $1), $2)", [req.body.params.user.crowdToken, req.body.params.sessions])
+    .then(result => { next(result) })
     .catch(e => console.error(e.stack))
     .then(() => client.end())
 }
@@ -103,7 +103,7 @@ function fetchUserInformation(req, res, next) {
     next({user:{name: "foo"}});
     /*
     crowd.session.getUser(token)
-        .then(user => next)
+        .then(user => {next(user)})
     */
 }
 

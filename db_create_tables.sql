@@ -43,7 +43,8 @@ CREATE TABLE webt."ui_settings" (
 
 CREATE TABLE webt."redux_json" (
 	"kayttaja_id" integer NOT NULL,
-	"data" jsonb
+	"data" jsonb,
+	"timestamp" timestamp NOT NULL DEFAULT (current_timestamp AT TIME ZONE 'UTC')
 ) WITH (
   OIDS=FALSE
 );

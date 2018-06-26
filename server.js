@@ -75,7 +75,7 @@ function fetchUserConfiguration(req, res, next) {
     }
   })
   client.query("SELECT * FROM webt.redux_json WHERE kayttaja_id = " +
-    "(SELECT id FROM webt.kayttaja WHERE crowd = $1) LIMIT 1", [JSON.parse(req.query[0]).user.crowdToken])
+    "(SELECT id FROM webt.kayttaja WHERE crowd = $1) ORDER BY timestamp DESC LIMIT 1", [JSON.parse(req.query[0]).user.crowdToken])
     .then(result => { next(result) })
     .catch(e => console.error(e.stack))
     .then(() => client.end())

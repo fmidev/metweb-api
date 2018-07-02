@@ -4,7 +4,7 @@ const express = require('express'),
       app = express(),
       bodyParser = require('body-parser'),
       cors = require('cors'),
-      methodOverride = require('method-override')
+      helmet = require('helmet')
 const pg = require('pg');
 const crowdClient = require('atlassian-crowd-client');
 
@@ -13,6 +13,9 @@ const CONFIG = require('./config');
 
 /* Settings */
 
+app.use(helmet({
+  hsts : false
+})); // Security
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 app.use(cors());

@@ -1,5 +1,13 @@
 #!/usr/bin/env node
 
+/*
+  Metweb user API
+  Table of contents:
+  1. Config middleware
+  2. Endpoints
+  3. Logic middleware
+*/
+
 const express = require('express'),
       app = express(),
       bodyParser = require('body-parser'),
@@ -11,7 +19,7 @@ const crowdClient = require('atlassian-crowd-client');
 const CONFIG = require('./config');
 
 
-/* Settings */
+/* 1. Config middleware */
 
 app.use(helmet({
   hsts : false
@@ -40,10 +48,24 @@ let crowdSettings = {
 
 let crowd = new crowdClient(crowdSettings);
 
+// General error handler
+app.use(function(err, req, res, next) {
+  if(err){
+    console.log(err);
+    res.status(err.status || 500).send(res.__("Tapahtui virhe."));
+  }else{
+    next();
+  }
+});
 
-/* Endpoints */
 
-app.post('/authorize', function(req, res){
+/* 2. Endpoints */
+
+app.post('/authorize', function(req, res, next){
+
+  if(err)
+    next(err);
+
   if(!req.body.params.user.crowdToken){
     res.status(403).send("No token.")
   }else{
@@ -51,24 +73,35 @@ app.post('/authorize', function(req, res){
       res.status(200).send(user);
     })
   }
+
 })
 
-app.get('/session', (req, res) => {
+app.get('/session', (req, res, next) => {
+
+  if(err)
+    next(err);
+
   fetchUserConfiguration(req, res, function(result){
     res.send(result.rows[0].data)
   });
+
 })
 
-app.post('/session', (req, res) => {
+app.post('/session', (req, res, next) => {
+
+  if(err)
+    next(err);
+
   insertUserConfiguration(req, res, function(result){
     res.send(result.rows[0].data)
   })
+
 })
 
 app.listen(CONFIG.servicePort, () => console.log('Metweb API listening on port '+CONFIG.servicePort+'!'))
 
 
-/* Middleware */
+/* 3. Logic middleware */
 
 function fetchUserConfiguration(req, res, next) {
   const client = new pg.Client(dbConnectionSettings);

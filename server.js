@@ -61,6 +61,10 @@ app.use(function(err, req, res, next) {
 
 /* 2. Endpoints */
 
+app.get('/', (req, res, next) => {
+  res.send("Metweb user API v0");
+})
+
 app.post('/authorize', function(req, res, next){
 
   if(err)

@@ -67,38 +67,44 @@ app.get('/', (req, res, next) => {
 
 app.post('/authorize', function(req, res, next){
 
-  if(err)
+  try {
+    if(!req.body.params.user.crowdToken){
+      res.status(403).send("No token.")
+    }else{
+      fetchUserInformation(req, res, function(user){
+        res.status(200).send(user);
+      })
+    }
+  }
+  catch (err) {
     next(err);
-
-  if(!req.body.params.user.crowdToken){
-    res.status(403).send("No token.")
-  }else{
-    fetchUserInformation(req, res, function(user){
-      res.status(200).send(user);
-    })
   }
 
 })
 
 app.get('/session', (req, res, next) => {
 
-  if(err)
+  try {
+    fetchUserConfiguration(req, res, function(result){
+      res.send(result.rows[0].data)
+    });
+  }
+  catch (err) {
     next(err);
-
-  fetchUserConfiguration(req, res, function(result){
-    res.send(result.rows[0].data)
-  });
+  }
 
 })
 
 app.post('/session', (req, res, next) => {
 
-  if(err)
+  try {
+    insertUserConfiguration(req, res, function(result){
+      res.send(result.rows[0].data)
+    })
+  }
+  catch (err) {
     next(err);
-
-  insertUserConfiguration(req, res, function(result){
-    res.send(result.rows[0].data)
-  })
+  }
 
 })
 
@@ -117,9 +123,9 @@ function fetchUserConfiguration(req, res, next) {
     }
   })
   client.query("SELECT * FROM webt.redux_json WHERE kayttaja_id = " +
-    "(SELECT id FROM webt.kayttaja WHERE crowd = $1) ORDER BY timestamp DESC LIMIT 1", [JSON.parse(req.query[0]).user.crowdToken])
+    "(SELECT id FROM webt.kayttaja WHERE crowd = $1) ORDER BY timestamp DESC LIMIT 1", [JSON.parse(req.query[0]).user.crowdUser])
     .then(result => { next(result) })
-    .catch(e => console.error(e.stack))
+    .catch(next)
     .then(() => client.end())
 }
 
@@ -133,9 +139,9 @@ function insertUserConfiguration(req, res, next) {
       console.log('connected')
     }
   })
-  client.query("INSERT INTO webt.redux_json (kayttaja_id, data) VALUES ((SELECT id FROM webt.kayttaja WHERE crowd = $1), $2)", [req.body.params.user.crowdToken, req.body.params.sessions])
+  client.query("INSERT INTO webt.redux_json (kayttaja_id, data) VALUES ((SELECT id FROM webt.kayttaja WHERE crowd = $1), $2)", [req.body.params.user.crowdUser, req.body.params.sessions])
     .then(result => { next(result) })
-    .catch(e => console.error(e.stack))
+    .catch(next)
     .then(() => client.end())
 }
 
@@ -145,6 +151,7 @@ function fetchUserInformation(req, res, next) {
     //next({user:{name: "foo"}});
     crowd.session.getUser(token)
         .then(user => {next(user)})
+        .catch(next);
 }
 
 // Fetch admin status from Crowd
@@ -158,9 +165,7 @@ function fetchIsAdminUser(req, res, next) {
             }).catch(function () {
                 res.send(false);
             });
-        }).catch(function () {
-            res.send(false);
-        });
+        }).catch(next);
     } else {
         res.send(false);
     }
@@ -173,10 +178,6 @@ function logOffUser(req, res, next) {
         crowd.session.removeAll(user.username).then(function () {
             crowd.session.destroy();
             res.send(true);
-        }).catch(function () {
-            res.send(false);
-        });
-    }).catch(function () {
-        res.send(false);
-    });
+        }).catch(next);
+    }).catch(next);
 }

@@ -16,7 +16,7 @@ const express = require('express'),
 const pg = require('pg');
 const crowdClient = require('atlassian-crowd-client');
 
-const CONFIG = require('./config');
+const CONFIG = require(__dirname+'/config');
 
 
 /* 1. Config middleware */

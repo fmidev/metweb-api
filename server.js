@@ -103,7 +103,7 @@ app.post('/session', (req, res, next) => {
 
   try {
     // First insert user. If it doesn't exist, no error is thrown due to ON CONFLICT DO NOTHING
-    insertUserIfNotExists(req, res, function(){
+    insertUserIfNotExists(req, res, function(result){
       // Then insert config
       insertUserConfiguration(req, res, function(result){
         res.send(result.rows[0].data)

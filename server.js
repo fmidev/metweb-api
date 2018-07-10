@@ -8,6 +8,10 @@
   3. Logic middleware
 */
 
+// NOTE: Refactoring the API is a bit unsafe at the time of writing due to WEBT-146. Hence listing some ideas here.
+// IDEA: Moving Postgres logic to a helper function. Also, does DB connection need to be initialized for each request? (Crowd connection has to be)
+// IDEA: Using Express Router for simpler chained middleware syntax and whatnot
+
 const express = require('express'),
       app = express(),
       bodyParser = require('body-parser'),
@@ -98,8 +102,12 @@ app.get('/session', (req, res, next) => {
 app.post('/session', (req, res, next) => {
 
   try {
-    insertUserConfiguration(req, res, function(result){
-      res.send(result.rows[0].data)
+    // First insert user. If it doesn't exist, no error is thrown due to ON CONFLICT DO NOTHING
+    insertUserIfNotExists(req, res, function(){
+      // Then insert config
+      insertUserConfiguration(req, res, function(result){
+        res.send(result.rows[0].data)
+      })
     })
   }
   catch (err) {
@@ -112,6 +120,21 @@ app.listen(CONFIG.servicePort, () => console.log('Metweb API listening on port '
 
 
 /* 3. Logic middleware */
+
+function insertUserIfNotExists(req, res, next) {
+  const client = new pg.Client(dbConnectionSettings);
+  client.connect((err) => {
+    if (err) {
+      console.error('connection error', err.stack)
+    } else {
+      console.log('connected')
+    }
+  })
+  client.query("INSERT INTO webt.kayttaja (crowd) VALUES ($1) ON CONFLICT DO NOTHING", [req.body.params.user.crowdUser])
+    .then(result => { next(result) })
+    .catch(next)
+    .then(() => client.end())
+}
 
 function fetchUserConfiguration(req, res, next) {
   const client = new pg.Client(dbConnectionSettings);
